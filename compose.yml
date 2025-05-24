@@ -1,41 +1,45 @@
-version: '3'
-services:
   miniflux:
-    image: miniflux/miniflux:latest
+    image: 'miniflux/miniflux:latest'
     depends_on:
       db:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgres://miniflux:secret@db/miniflux?sslmode=disable
-      - RUN_MIGRATIONS=1
-      - CREATE_ADMIN=1
-      - DISABLE_HSTS=1
-      - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=test123
+      DATABASE_URL: 'postgres://miniflux:secret@db/miniflux?sslmode=disable'
+      RUN_MIGRATIONS: '1'
+      CREATE_ADMIN: '1'
+      DISABLE_HSTS: '1'
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: test123
+      COOLIFY_BRANCH: '"main"'
+      COOLIFY_RESOURCE_UUID: pksoc8owg0oooowk88okgo8w
+      COOLIFY_CONTAINER_NAME: miniflux-pksoc8owg0oooowk88okgo8w-095029812047
+      COOLIFY_URL: rs.boucetta.me
+      COOLIFY_FQDN: rs.boucetta.me
     healthcheck:
-      test: ["CMD", "/usr/bin/miniflux", "-healthcheck", "auto"]
+      test: [ "CMD", "/usr/bin/miniflux", "-healthcheck", "auto" ]
     restart: unless-stopped
+    container_name: miniflux-pksoc8owg0oooowk88okgo8w-095029812047
+    labels:
+      - coolify.managed=true
+      - coolify.version=4.0.0-beta.418
+      - coolify.applicationId=3
+      - coolify.type=application
+      - coolify.name=miniflux
+      - coolify.projectName=ai-automatisation
+      - coolify.serviceName=miniflux
+      - coolify.environmentName=services
 
-  db:
-    image: postgres:17-alpine
-    environment:
-      - POSTGRES_USER=miniflux
-      - POSTGRES_PASSWORD=secret
-      - POSTGRES_DB=miniflux
-    volumes:
-      - miniflux-db:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "miniflux"]
-      interval: 10s
-      start_period: 10s
-    restart: unless-stopped
+      # ✅ TRAEFIK routing
+      - traefik.enable=true
+      - traefik.http.routers.miniflux.rule=Host(`rs.boucetta.me`)
+      - traefik.http.routers.miniflux.entrypoints=websecure
+      - traefik.http.routers.miniflux.tls.certresolver=myresolver
+      - traefik.http.services.miniflux.loadbalancer.server.port=8080
 
-  nextflux:
-    image: electh/nextflux:latest
-    depends_on:
-      miniflux:
-        condition: service_healthy
-    restart: unless-stopped
-
-volumes:
-  miniflux-db:
+      # ✅ CADDY routing (optional fallback)
+      - 'caddy_0=rs.boucetta.me'
+      - 'caddy_0.reverse_proxy={{upstreams}}'
+      - 'caddy_0.encode=zstd gzip'
+      - 'caddy_0.header=-Server'
+    networks:
+      pksoc8owg0oooowk88okgo8w: null
