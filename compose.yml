@@ -1,5 +1,20 @@
-version: '3'
+version: '3.8'
+
 services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_USER=miniflux
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=miniflux
+    volumes:
+      - miniflux-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "miniflux"]
+      interval: 10s
+      start_period: 10s
+    restart: unless-stopped
+
   miniflux:
     image: miniflux/miniflux:latest
     depends_on:
@@ -15,20 +30,19 @@ services:
     healthcheck:
       test: ["CMD", "/usr/bin/miniflux", "-healthcheck", "auto"]
     restart: unless-stopped
+    labels:
+      # ✅ Traefik (Coolify reverse proxy)
+      - traefik.enable=true
+      - traefik.http.routers.miniflux.rule=Host(`rs.boucetta.me`)
+      - traefik.http.routers.miniflux.entrypoints=websecure
+      - traefik.http.routers.miniflux.tls.certresolver=myresolver
+      - traefik.http.services.miniflux.loadbalancer.server.port=8080
 
-  db:
-    image: postgres:17-alpine
-    environment:
-      - POSTGRES_USER=miniflux
-      - POSTGRES_PASSWORD=secret
-      - POSTGRES_DB=miniflux
-    volumes:
-      - miniflux-db:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "miniflux"]
-      interval: 10s
-      start_period: 10s
-    restart: unless-stopped
+      # ✅ Caddy fallback (Coolify supports Caddy too)
+      - 'caddy_0=rs.boucetta.me'
+      - 'caddy_0.reverse_proxy={{upstreams}}'
+      - 'caddy_0.encode=zstd gzip'
+      - 'caddy_0.header=-Server'
 
   nextflux:
     image: electh/nextflux:latest
