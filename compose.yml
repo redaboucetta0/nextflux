@@ -1,9 +1,7 @@
+version: '3'
 services:
   miniflux:
     image: miniflux/miniflux:latest
-    container_name: miniflux
-    ports:
-      - "80:8080"
     depends_on:
       db:
         condition: service_healthy
@@ -17,9 +15,9 @@ services:
     healthcheck:
       test: ["CMD", "/usr/bin/miniflux", "-healthcheck", "auto"]
     restart: unless-stopped
+
   db:
     image: postgres:17-alpine
-    container_name: miniflux-db
     environment:
       - POSTGRES_USER=miniflux
       - POSTGRES_PASSWORD=secret
@@ -31,14 +29,13 @@ services:
       interval: 10s
       start_period: 10s
     restart: unless-stopped
+
   nextflux:
     image: electh/nextflux:latest
-    container_name: nextflux
-    ports:
-      - 3000:3000
     depends_on:
       miniflux:
         condition: service_healthy
     restart: unless-stopped
+
 volumes:
   miniflux-db:
